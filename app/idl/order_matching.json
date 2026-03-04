@@ -1,0 +1,147 @@
+{
+  "version": "0.1.0",
+  "name": "order_matching",
+  "instructions": [
+    {
+      "name": "initializeMarket",
+      "accounts": [
+        { "name": "market", "isMut": true, "isSigner": false },
+        { "name": "admin", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "feeBps", "type": "u16" }]
+    },
+    {
+      "name": "placeOrder",
+      "accounts": [
+        { "name": "market", "isMut": true, "isSigner": false },
+        { "name": "order", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "side", "type": { "defined": "Side" } },
+        { "name": "orderType", "type": { "defined": "OrderType" } },
+        { "name": "price", "type": "u64" },
+        { "name": "quantity", "type": "u64" }
+      ]
+    },
+    {
+      "name": "cancelOrder",
+      "accounts": [
+        { "name": "order", "isMut": true, "isSigner": false },
+        { "name": "market", "isMut": false, "isSigner": false },
+        { "name": "authority", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    },
+    {
+      "name": "matchOrders",
+      "accounts": [
+        { "name": "bidOrder", "isMut": true, "isSigner": false },
+        { "name": "askOrder", "isMut": true, "isSigner": false },
+        { "name": "market", "isMut": false, "isSigner": false },
+        { "name": "matcher", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Market",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "admin", "type": "publicKey" },
+          { "name": "feeBps", "type": "u16" },
+          { "name": "orderCount", "type": "u64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Order",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "market", "type": "publicKey" },
+          { "name": "owner", "type": "publicKey" },
+          { "name": "orderId", "type": "u64" },
+          { "name": "side", "type": { "defined": "Side" } },
+          { "name": "orderType", "type": { "defined": "OrderType" } },
+          { "name": "price", "type": "u64" },
+          { "name": "quantity", "type": "u64" },
+          { "name": "filledQty", "type": "u64" },
+          { "name": "status", "type": { "defined": "OrderStatus" } },
+          { "name": "createdAt", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "Side",
+      "type": { "kind": "enum", "variants": [{ "name": "Buy" }, { "name": "Sell" }] }
+    },
+    {
+      "name": "OrderType",
+      "type": { "kind": "enum", "variants": [{ "name": "Limit" }, { "name": "Market" }] }
+    },
+    {
+      "name": "OrderStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Open" },
+          { "name": "Filled" },
+          { "name": "Cancelled" },
+          { "name": "PartiallyFilled" }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "MarketInitialized",
+      "fields": [
+        { "name": "market", "type": "publicKey", "index": false },
+        { "name": "admin", "type": "publicKey", "index": false },
+        { "name": "feeBps", "type": "u16", "index": false }
+      ]
+    },
+    {
+      "name": "OrderPlaced",
+      "fields": [
+        { "name": "market", "type": "publicKey", "index": false },
+        { "name": "orderId", "type": "u64", "index": false },
+        { "name": "owner", "type": "publicKey", "index": false },
+        { "name": "side", "type": { "defined": "Side" }, "index": false },
+        { "name": "price", "type": "u64", "index": false },
+        { "name": "quantity", "type": "u64", "index": false }
+      ]
+    },
+    {
+      "name": "OrderCancelled",
+      "fields": [{ "name": "orderId", "type": "u64", "index": false }]
+    },
+    {
+      "name": "MatchEvent",
+      "fields": [
+        { "name": "bidOrderId", "type": "u64", "index": false },
+        { "name": "askOrderId", "type": "u64", "index": false },
+        { "name": "price", "type": "u64", "index": false },
+        { "name": "quantity", "type": "u64", "index": false },
+        { "name": "timestamp", "type": "i64", "index": false }
+      ]
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "InvalidPrice", "msg": "Invalid price" },
+    { "code": 6001, "name": "InvalidQuantity", "msg": "Invalid quantity" },
+    { "code": 6002, "name": "OrderNotOpen", "msg": "Order is not open" },
+    { "code": 6003, "name": "Unauthorized", "msg": "Unauthorized" },
+    { "code": 6004, "name": "PriceMismatch", "msg": "Bid price must be >= ask price" }
+  ],
+  "metadata": { "address": "EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw" }
+}
