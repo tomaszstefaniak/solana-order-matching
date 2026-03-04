@@ -1,5 +1,6 @@
 {
   "name": "order-matching",
+  "type": "commonjs",
   "version": "0.1.0",
   "description": "On-chain Order Matching Engine - Superteam Poland Bounty",
   "scripts": {
