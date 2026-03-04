@@ -19,10 +19,10 @@ import { homedir } from "os";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PROGRAM_ID = new PublicKey(
-  "EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw"
+  "56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY"
 );
 
-const IDL_PATH = join(__dirname, "../../target/idl/order_matching.json");
+const IDL_PATH = join(__dirname, "../../app/idl/order_matching.json");
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function loadWallet(walletPath: string): Keypair {

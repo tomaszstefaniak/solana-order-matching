@@ -16,11 +16,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname_compat = dirname(__filename);
 
 // Load the IDL manually since IDL build is broken with current toolchain
-const idlPath = join(__dirname_compat, "../target/idl/order_matching.json");
+const idlPath = join(__dirname_compat, "../app/idl/order_matching.json");
 const idl = JSON.parse(readFileSync(idlPath, "utf8"));
 
 const PROGRAM_ID = new PublicKey(
-  "EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw"
+  "56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY"
 );
 
 function getMarketPDA(admin: PublicKey): [PublicKey, number] {

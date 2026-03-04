@@ -12,7 +12,7 @@ This project implements an on-chain order matching engine as a Solana program wr
 
 Key capabilities:
 - **Initialize a market** — create a PDA-backed order book with a configurable fee rate
-- **Place orders** — limit and market orders for both buy and sell sides
+- **Place orders** — limit orders for both buy and sell sides (limit-only; market orders are rejected in this version)
 - **Match orders** — permissionless matching when bid ≥ ask; partial and full fills
 - **Cancel orders** — by the order owner or market admin
 - **Events** — all state transitions emit `emit!()` events for indexing
@@ -69,7 +69,7 @@ On-chain replacement for the components above:
 |---|---|
 | No on-chain order book scan | `match_orders` requires passing both order PDAs explicitly. Callers (bots, keepers) must find matches off-chain (e.g. via `getProgramAccounts`) and then submit the matching transaction. This avoids O(n) compute cost. |
 | Compute Unit limit | Each transaction is bounded by ~1.4M CU per block, ~200k CU per typical instruction. Complex matching loops are not feasible in a single transaction. |
-| Rent per order | Each `Order` account (~117 bytes) requires ~0.002 SOL rent-exempt deposit. High-frequency strategies must account for account creation cost. |
+| Rent per order | Each `Order` account (~116 bytes) requires ~0.002 SOL rent-exempt deposit. High-frequency strategies must account for account creation cost. |
 | No token transfer | This implementation is a **pure state machine**. It demonstrates the matching logic without actual SPL token transfers. A production system would add token vaults (SPL Token program) for escrowing funds. |
 | Partial fill support | `match_orders` fills up to `min(bid_remaining, ask_remaining)`, updating both order statuses (`PartiallyFilled` or `Filled`). Multiple calls are needed to fully fill a large order against several smaller ones. |
 | Anyone can match | `matcher` is any signer. Matching is permissionless — a keeper network (or any MEV bot) can submit matching transactions and collect protocol fees in a production version. |
@@ -136,7 +136,7 @@ Places a new order on the market.
 | `owner` | Payer + signer |
 | `system_program` | For account creation |
 
-**Validation**: `quantity > 0`; `price > 0` unless `order_type == Market`.
+**Validation**: `quantity > 0`; `price > 0`; `order_type == Limit` (market orders are not supported in this version).
 
 **Events**: `OrderPlaced { market, order_id, owner, side, price, quantity }`
 
@@ -154,7 +154,7 @@ Cancels an open or partially-filled order.
 
 **Validation**: Order must be `Open` or `PartiallyFilled`.
 
-**Events**: `OrderCancelled { order_id }`
+**Events**: `OrderCancelled { order_id, owner }`
 
 ---
 
