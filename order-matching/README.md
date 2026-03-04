@@ -234,6 +234,8 @@ Program ID: **`EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw`**
 
 Explorer: https://explorer.solana.com/address/EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw?cluster=devnet
 
+Deploy transaction: https://explorer.solana.com/tx/3gqLLnKMd9uyZXqYgSHhJ2iZJD3eSfoDf7VsQVPVAGqBaQKcsnxAKG2vxAiPvGMf8eWaqAWFphJ4jb6DFXTxsWku?cluster=devnet
+
 ---
 
 ## Client CLI Usage
