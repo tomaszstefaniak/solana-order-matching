@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "On-chain Order Matching Engine - Superteam Poland Bounty",
   "scripts": {
-    "test": "ts-mocha -r ts-node/register --timeout 1000000 tests/**/*.ts"
+    "test": "node -r ts-node/register ./node_modules/mocha/bin/mocha --timeout 1000000 'tests/**/*.ts'"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",
