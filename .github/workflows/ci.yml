@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Rust fmt + check + audit
+    name: Rust fmt + check + audit + JS checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,10 +45,10 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install npm deps
+      - name: Install npm deps (root + app)
         run: |
-          cd app && npm ci
           npm ci
+          cd app && npm ci
 
       - name: Run npm audit (low severity allowed)
         run: |
