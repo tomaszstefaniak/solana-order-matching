@@ -37,7 +37,10 @@ pub mod order_matching {
         quantity: u64,
     ) -> Result<()> {
         require!(quantity > 0, OrderMatchingError::InvalidQuantity);
-        require!(order_type == OrderType::Limit, OrderMatchingError::MarketOrdersNotSupported);
+        require!(
+            order_type == OrderType::Limit,
+            OrderMatchingError::MarketOrdersNotSupported
+        );
         require!(price > 0, OrderMatchingError::InvalidPrice);
 
         let market = &mut ctx.accounts.market;

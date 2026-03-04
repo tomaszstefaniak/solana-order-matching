@@ -40,10 +40,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Rust 1.79
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.79.0"
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Solana CLI
         run: |
@@ -53,9 +61,12 @@ jobs:
       - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.1 anchor-cli --locked
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Build program
-        run: anchor build
+        run: |
+          export PATH="$HOME/.cargo/bin:$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          anchor build
 
       - name: Upload IDL artifact
         uses: actions/upload-artifact@v4
