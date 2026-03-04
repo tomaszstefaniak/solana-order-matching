@@ -1,14 +1,9 @@
-import * as anchor from "@coral-xyz/anchor";
-import {
-  Keypair,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-} from "@solana/web3.js";
-import { assert } from "chai";
-import { readFileSync } from "fs";
-import { join } from "path";
-import BN from "bn.js";
+const anchor = require("@coral-xyz/anchor");
+const { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } = require("@solana/web3.js");
+const { assert } = require("chai");
+const { readFileSync } = require("fs");
+const { join } = require("path");
+const BN = require("bn.js");
 
 // Load IDL from committed file (no anchor build required)
 const idlPath = join(__dirname, "../app/idl/order_matching.json");
