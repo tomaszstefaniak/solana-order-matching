@@ -33,10 +33,17 @@ function getOrderPDA(
 }
 
 describe("order-matching", () => {
-  const provider = anchor.AnchorProvider.env();
-  anchor.setProvider(provider);
+  const RUN_INTEGRATION = process.env.RUN_INTEGRATION === 'true';
 
-  const program = new anchor.Program(idl as anchor.Idl, provider);
+  if (!RUN_INTEGRATION) {
+    console.log('Integration tests are skipped by default. To run them set RUN_INTEGRATION=true and ANCHOR_PROVIDER_URL and ANCHOR_WALLET as needed.');
+  }
+
+  // Integration tests require an Anchor provider (devnet or local validator)
+  const provider = RUN_INTEGRATION ? anchor.AnchorProvider.env() : null;
+  if (provider) anchor.setProvider(provider);
+
+  const program = provider ? new anchor.Program(idl as anchor.Idl, provider) : null;
 
   let admin: Keypair;
   let trader1: Keypair;
@@ -44,7 +51,11 @@ describe("order-matching", () => {
   let marketPDA: PublicKey;
   let marketBump: number;
 
-  before(async () => {
+  before(async function() {
+    if (!RUN_INTEGRATION) {
+      this.skip();
+    }
+
     admin = Keypair.generate();
     trader1 = Keypair.generate();
     trader2 = Keypair.generate();
