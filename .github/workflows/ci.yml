@@ -13,10 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust 1.79
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.79.0"
           components: rustfmt, clippy
 
       - name: Cache cargo
@@ -40,10 +39,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust 1.79
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: "1.79.0"
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -59,9 +56,7 @@ jobs:
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
       - name: Install Anchor CLI
-        run: |
-          cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.1 anchor-cli --locked
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.1 anchor-cli --locked
 
       - name: Build program
         run: |
