@@ -44,6 +44,15 @@
         { "name": "matcher", "isMut": false, "isSigner": true }
       ],
       "args": []
+    },
+    {
+      "name": "closeOrder",
+      "accounts": [
+        { "name": "order", "isMut": true, "isSigner": false },
+        { "name": "market", "isMut": false, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -123,7 +132,10 @@
     },
     {
       "name": "OrderCancelled",
-      "fields": [{ "name": "orderId", "type": "u64", "index": false }]
+      "fields": [
+        { "name": "orderId", "type": "u64", "index": false },
+        { "name": "owner", "type": "publicKey", "index": false }
+      ]
     },
     {
       "name": "MatchEvent",
@@ -137,11 +149,18 @@
     }
   ],
   "errors": [
-    { "code": 6000, "name": "InvalidPrice", "msg": "Invalid price" },
-    { "code": 6001, "name": "InvalidQuantity", "msg": "Invalid quantity" },
-    { "code": 6002, "name": "OrderNotOpen", "msg": "Order is not open" },
-    { "code": 6003, "name": "Unauthorized", "msg": "Unauthorized" },
-    { "code": 6004, "name": "PriceMismatch", "msg": "Bid price must be >= ask price" }
+    { "code": 6000, "name": "InvalidPrice", "msg": "Invalid price — must be > 0 for limit orders" },
+    { "code": 6001, "name": "InvalidQuantity", "msg": "Invalid quantity — must be > 0" },
+    { "code": 6002, "name": "OrderNotOpen", "msg": "Order is not open or partially filled" },
+    { "code": 6003, "name": "OrderNotClosed", "msg": "Order must be Filled or Cancelled to close" },
+    { "code": 6004, "name": "Unauthorized", "msg": "Unauthorized — caller is not the order owner or market admin" },
+    { "code": 6005, "name": "PriceMismatch", "msg": "Bid price must be >= ask price" },
+    { "code": 6006, "name": "InvalidSide", "msg": "Invalid order side for this operation" },
+    { "code": 6007, "name": "MarketMismatch", "msg": "Order does not belong to the provided market" },
+    { "code": 6008, "name": "InvalidFeeBps", "msg": "fee_bps must be <= 10_000" },
+    { "code": 6009, "name": "MarketOrdersNotSupported", "msg": "Market orders are not supported in this version (limit-only prototype)" },
+    { "code": 6010, "name": "Overflow", "msg": "Arithmetic overflow or underflow" },
+    { "code": 6011, "name": "ZeroFill", "msg": "Fill quantity is zero — orders may already be fully filled" }
   ],
-  "metadata": { "address": "EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw" }
+  "metadata": { "address": "56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY" }
 }

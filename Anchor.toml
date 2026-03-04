@@ -5,10 +5,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-order_matching = "EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw"
+order_matching = "56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY"
 
 [programs.devnet]
-order_matching = "EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw"
+order_matching = "56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY"
 
 [registry]
 url = "https://api.apr.dev"

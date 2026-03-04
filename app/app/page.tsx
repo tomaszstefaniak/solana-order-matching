@@ -6,7 +6,7 @@ import { AnchorProvider, Program, BN, web3 } from "@coral-xyz/anchor";
 import { useState, useEffect, useCallback } from "react";
 import idl from "../idl/order_matching.json";
 
-const PROGRAM_ID = new PublicKey("EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw");
+const PROGRAM_ID = new PublicKey("56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY");
 
 type OrderStatus = "Open" | "Filled" | "Cancelled" | "PartiallyFilled";
 type Side = "Buy" | "Sell";

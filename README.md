@@ -2,7 +2,7 @@
 
 **Superteam Poland Bounty** — Solana/Anchor program implementing a central-limit order book (CLOB) entirely on-chain.
 
-Program ID (devnet): `EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw`
+Program ID (devnet): `56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY`
 
 ---
 
@@ -230,11 +230,11 @@ anchor deploy --provider.cluster devnet
 
 ## Devnet Deployment
 
-Program ID: **`EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw`**
+Program ID: **`56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY`**
 
-Explorer: https://explorer.solana.com/address/EpgQjhxaSA5ee5xC8aTFgooUwED3jiSEnpytck4epUTw?cluster=devnet
+Explorer: https://explorer.solana.com/address/56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY?cluster=devnet
 
-Deploy transaction: https://explorer.solana.com/tx/3gqLLnKMd9uyZXqYgSHhJ2iZJD3eSfoDf7VsQVPVAGqBaQKcsnxAKG2vxAiPvGMf8eWaqAWFphJ4jb6DFXTxsWku?cluster=devnet
+Deploy transaction (v2): https://explorer.solana.com/tx/ZnFXKa8nw86KpKhmJetc7bWH5NrCJiWdvgALtNQdNJdsXQEQZWS6Rw1NJReUYBcDSKZ9SEfjH5gnNyVRZhBJd8V?cluster=devnet
 
 ---
 
