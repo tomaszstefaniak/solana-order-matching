@@ -140,10 +140,9 @@ program
 // ─── place-order ─────────────────────────────────────────────────────────────
 program
   .command("place-order")
-  .description("Place a limit or market order")
+  .description("Place a limit order (market orders are not supported)")
   .requiredOption("-m, --market <pubkey>", "Market admin public key (to derive market PDA)")
   .requiredOption("-s, --side <buy|sell>", "Order side")
-  .requiredOption("-t, --type <limit|market>", "Order type")
   .requiredOption("-p, --price <number>", "Price in lamports", parseInt)
   .requiredOption("-q, --quantity <number>", "Quantity", parseInt)
   .action(async (options) => {
@@ -160,9 +159,9 @@ program
     const [orderPDA] = getOrderPDA(marketPDA, orderCount);
 
     const side = options.side === "buy" ? { buy: {} } : { sell: {} };
-    const orderType = options.type === "market" ? { market: {} } : { limit: {} };
+    const orderType = { limit: {} }; // only limit orders supported
 
-    console.log(`Placing ${options.side.toUpperCase()} ${options.type.toUpperCase()} order...`);
+    console.log(`Placing ${options.side.toUpperCase()} LIMIT order...`);
     console.log(`  Owner    : ${owner.publicKey.toBase58()}`);
     console.log(`  Market   : ${marketPDA.toBase58()}`);
     console.log(`  Order ID : ${orderCount}`);
@@ -270,6 +269,40 @@ program
     const order = await prog.account.order.fetch(orderPDA);
 
     console.log("\n" + formatOrder(order) + "\n");
+  });
+
+// ─── close-order ─────────────────────────────────────────────────────────────
+program
+  .command("close-order")
+  .description("Close a filled or cancelled order and reclaim rent")
+  .requiredOption("-o, --order <pubkey>", "Order PDA public key")
+  .requiredOption("-m, --market <pubkey>", "Market admin public key (to derive market PDA)")
+  .action(async (options) => {
+    const opts = program.opts();
+    const provider = getProvider(opts.cluster, opts.wallet);
+    const prog = getProgram(provider);
+
+    const owner = (provider.wallet as Wallet).payer;
+    const marketAdmin = new PublicKey(options.market);
+    const [marketPDA] = getMarketPDA(marketAdmin);
+    const orderPDA = new PublicKey(options.order);
+
+    console.log(`Closing order ${orderPDA.toBase58()}...`);
+    console.log(`Rent will be returned to: ${owner.publicKey.toBase58()}`);
+
+    const tx = await prog.methods
+      .closeOrder()
+      .accountsStrict({
+        order: orderPDA,
+        market: marketPDA,
+        owner: owner.publicKey,
+      })
+      .signers([owner])
+      .rpc();
+
+    console.log(`\nTransaction: ${tx}`);
+    console.log(`Order closed. Rent reclaimed!`);
+    console.log(`Explorer: https://explorer.solana.com/tx/${tx}?cluster=${opts.cluster}`);
   });
 
 // ─── show-market ─────────────────────────────────────────────────────────────

@@ -7,16 +7,11 @@ import {
 } from "@solana/web3.js";
 import { assert } from "chai";
 import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { join } from "path";
 import BN from "bn.js";
 
-// ESM-compatible __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname_compat = dirname(__filename);
-
-// Load the IDL manually since IDL build is broken with current toolchain
-const idlPath = join(__dirname_compat, "../app/idl/order_matching.json");
+// Load IDL from committed file (no anchor build required)
+const idlPath = join(__dirname, "../app/idl/order_matching.json");
 const idl = JSON.parse(readFileSync(idlPath, "utf8"));
 
 const PROGRAM_ID = new PublicKey(

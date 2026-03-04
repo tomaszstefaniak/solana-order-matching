@@ -101,7 +101,15 @@ export default function Home() {
     if (!wallet.publicKey || !market) return;
     try {
       const program = getProgram(connection, wallet);
-      const all = await (program.account as any).order.all();
+      // Filter by market PDA (offset 8 = discriminator, field 0 = market pubkey)
+      const all = await (program.account as any).order.all([
+        {
+          memcmp: {
+            offset: 8,
+            bytes: market.address,
+          },
+        },
+      ]);
       const parsed: OrderData[] = all.map((a: any) => ({
         address: a.publicKey.toBase58(),
         orderId: a.account.orderId.toNumber(),
