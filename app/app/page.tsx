@@ -1,12 +1,11 @@
 "use client";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { useConnection, useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { AnchorProvider, Program, BN, web3 } from "@coral-xyz/anchor";
 import { useState, useEffect, useCallback } from "react";
 import idl from "../idl/order_matching.json";
 
-const PROGRAM_ID = new PublicKey("56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY");
+const PROGRAM_ID = new web3.PublicKey("CpnJ2pRUqZxSLh45qiX58YyJBuhQ3voDKKy8RYibnJ4n");
 
 type OrderStatus = "Open" | "Filled" | "Cancelled" | "PartiallyFilled";
 type Side = "Buy" | "Sell";
@@ -30,22 +29,46 @@ interface OrderData {
   status: OrderStatus;
 }
 
+/**
+ * Safely extract a base58 public key string from any PublicKey-like object.
+ * Handles the case where _bn is undefined (e.g. Phantom wallet serialization).
+ */
+function safePubkeyBase58(pubkey: any): string {
+  // 1. Try toJSON() — returns base58 string without relying on _bn in some implementations
+  try { const j = pubkey.toJSON(); if (typeof j === 'string' && j.length > 0) return j; } catch { }
+  // 2. Try toBase58() directly
+  try { const b = pubkey.toBase58(); if (typeof b === 'string') return b; } catch { }
+  // 3. Try toString()
+  try { const s = pubkey.toString(); if (typeof s === 'string' && s.length > 20) return s; } catch { }
+  // 4. Access _bn directly and convert
+  try { if (pubkey._bn) return new web3.PublicKey(pubkey._bn.toArray()).toBase58(); } catch { }
+  // 5. If it's already a string, just use it
+  if (typeof pubkey === 'string') return pubkey;
+  throw new Error('Unable to extract public key from wallet');
+}
+
 function getProgram(connection: web3.Connection, wallet: any) {
-  const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
+  const pubkeyStr = safePubkeyBase58(wallet.publicKey);
+  const strictAnchorWallet = {
+    signTransaction: wallet.signTransaction,
+    signAllTransactions: wallet.signAllTransactions,
+    publicKey: new web3.PublicKey(pubkeyStr),
+  };
+  const provider = new AnchorProvider(connection, strictAnchorWallet as any, { commitment: "confirmed" });
   return new Program(idl as any, provider);
 }
 
-function getMarketPDA(adminKey: PublicKey): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync(
+function getMarketPDA(adminKey: web3.PublicKey): [web3.PublicKey, number] {
+  return web3.PublicKey.findProgramAddressSync(
     [Buffer.from("market"), adminKey.toBuffer()],
     PROGRAM_ID
   );
 }
 
-function getOrderPDA(marketKey: PublicKey, orderId: number): [PublicKey, number] {
+function getOrderPDA(marketKey: web3.PublicKey, orderId: number): [web3.PublicKey, number] {
   const buf = Buffer.alloc(8);
   buf.writeBigUInt64LE(BigInt(orderId));
-  return PublicKey.findProgramAddressSync(
+  return web3.PublicKey.findProgramAddressSync(
     [Buffer.from("order"), marketKey.toBuffer(), buf],
     PROGRAM_ID
   );
@@ -65,6 +88,7 @@ function statusColor(status: OrderStatus) {
 export default function Home() {
   const { connection } = useConnection();
   const wallet = useWallet();
+  const anchorWallet = useAnchorWallet();
   const [market, setMarket] = useState<MarketData | null>(null);
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [feeBps, setFeeBps] = useState("25");
@@ -76,32 +100,45 @@ export default function Home() {
   const [txLog, setTxLog] = useState<string[]>([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
 
   const log = (msg: string) => setStatus(msg);
   const addTx = (sig: string) => setTxLog((prev) => [sig, ...prev].slice(0, 5));
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const fetchMarket = useCallback(async () => {
-    if (!wallet.publicKey) return;
+    if (!anchorWallet || !anchorWallet.publicKey) return;
     try {
-      const program = getProgram(connection, wallet);
-      const [marketPDA] = getMarketPDA(wallet.publicKey);
+      const program = getProgram(connection, anchorWallet);
+      const userKey = new web3.PublicKey(safePubkeyBase58(anchorWallet.publicKey));
+      const [marketPDA] = getMarketPDA(userKey);
       const data = await (program.account as any).market.fetch(marketPDA);
+      console.log("fetchMarket: Data fetched successfully");
       setMarket({
         admin: data.admin.toBase58(),
         feeBps: data.feeBps,
-        orderCount: data.orderCount.toNumber(),
+        orderCount: (data.orderCount && typeof data.orderCount.toNumber === 'function') ? data.orderCount.toNumber() : 0,
         address: marketPDA.toBase58(),
       });
-    } catch {
+    } catch (e: any) {
+      // "Account does not exist" is expected when no market has been created yet
+      if (!e.message?.includes("Account does not exist")) {
+        console.error("fetchMarket error:", e);
+        log(`fetchMarket error: ${e.message}`);
+      }
       setMarket(null);
     }
-  }, [connection, wallet]);
+  }, [connection, anchorWallet]);
 
   const fetchOrders = useCallback(async () => {
-    if (!wallet.publicKey || !market) return;
+    if (!anchorWallet || !anchorWallet.publicKey || !market) return;
     try {
-      const program = getProgram(connection, wallet);
-      // Filter by market PDA (offset 8 = discriminator, field 0 = market pubkey)
+      const program = getProgram(connection, anchorWallet);
       const all = await (program.account as any).order.all([
         {
           memcmp: {
@@ -110,35 +147,52 @@ export default function Home() {
           },
         },
       ]);
+      console.log(`fetchOrders: ${all.length} orders fetched`);
+      // Anchor returns enum variants as camelCase keys e.g. { open: {} }, { buy: {} }
+      // Normalize to PascalCase to match our OrderStatus / Side types
+      const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
       const parsed: OrderData[] = all.map((a: any) => ({
         address: a.publicKey.toBase58(),
-        orderId: a.account.orderId.toNumber(),
+        orderId: (a.account.orderId && typeof a.account.orderId.toNumber === 'function') ? a.account.orderId.toNumber() : 0,
         owner: a.account.owner.toBase58(),
-        side: a.account.side.buy !== undefined ? "Buy" : "Sell",
+        side: (a.account.side && typeof a.account.side === 'object' ? cap(Object.keys(a.account.side)[0]) : "Buy") as Side,
         orderType: a.account.orderType.limit !== undefined ? "Limit" : "Market",
-        price: a.account.price.toNumber(),
-        quantity: a.account.quantity.toNumber(),
-        filledQty: a.account.filledQty.toNumber(),
-        status: Object.keys(a.account.status)[0] as OrderStatus,
+        price: (a.account.price && typeof a.account.price.toNumber === 'function') ? a.account.price.toNumber() : 0,
+        quantity: (a.account.quantity && typeof a.account.quantity.toNumber === 'function') ? a.account.quantity.toNumber() : 0,
+        filledQty: (a.account.filledQty && typeof a.account.filledQty.toNumber === 'function') ? a.account.filledQty.toNumber() : 0,
+        status: (a.account.status && typeof a.account.status === 'object' ? cap(Object.keys(a.account.status)[0]) : "Open") as OrderStatus,
       }));
       setOrders(parsed.sort((a, b) => a.orderId - b.orderId));
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("fetchOrders Error:", e);
+      log(`fetchOrders Error: ${e.message}`);
     }
-  }, [connection, wallet, market]);
+  }, [connection, anchorWallet, market]);
+
+  const fetchBalance = useCallback(async () => {
+    if (!anchorWallet || !anchorWallet.publicKey) return;
+    try {
+      const b = await connection.getBalance(anchorWallet.publicKey);
+      setBalance(b / web3.LAMPORTS_PER_SOL);
+    } catch (e) {
+      console.error("fetchBalance error:", e);
+    }
+  }, [connection, anchorWallet]);
 
   useEffect(() => { fetchMarket(); }, [fetchMarket]);
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+  useEffect(() => { fetchBalance(); }, [fetchBalance]);
 
   async function initMarket() {
-    if (!wallet.publicKey || !wallet.signTransaction) return;
+    if (!anchorWallet || !anchorWallet.publicKey || !anchorWallet.signTransaction) return;
     setLoading(true);
     try {
-      const program = getProgram(connection, wallet);
-      const [marketPDA] = getMarketPDA(wallet.publicKey);
+      const program = getProgram(connection, anchorWallet);
+      const userKey = new web3.PublicKey(safePubkeyBase58(anchorWallet.publicKey));
+      const [marketPDA] = getMarketPDA(userKey);
       const tx = await (program.methods as any)
         .initializeMarket(parseInt(feeBps))
-        .accounts({ market: marketPDA, admin: wallet.publicKey, systemProgram: SystemProgram.programId })
+        .accounts({ market: marketPDA, admin: userKey, systemProgram: web3.SystemProgram.programId })
         .rpc();
       addTx(tx);
       log("Market initialized ✓");
@@ -150,17 +204,18 @@ export default function Home() {
   }
 
   async function placeOrder() {
-    if (!wallet.publicKey || !market) return;
+    if (!anchorWallet || !anchorWallet.publicKey || !market) return;
     setLoading(true);
     try {
-      const program = getProgram(connection, wallet);
-      const marketPDA = new PublicKey(market.address);
+      const program = getProgram(connection, anchorWallet);
+      const userKey = new web3.PublicKey(safePubkeyBase58(anchorWallet.publicKey));
+      const marketPDA = new web3.PublicKey(market.address);
       const orderId = market.orderCount;
       const [orderPDA] = getOrderPDA(marketPDA, orderId);
       const sideArg = side === "Buy" ? { buy: {} } : { sell: {} };
       const tx = await (program.methods as any)
-        .placeOrder(sideArg, { limit: {} }, new BN(price), new BN(quantity))
-        .accounts({ market: marketPDA, order: orderPDA, owner: wallet.publicKey, systemProgram: SystemProgram.programId })
+        .placeOrder(sideArg, { limit: {} }, new BN(Math.round(parseFloat(price) * web3.LAMPORTS_PER_SOL)), new BN(quantity))
+        .accounts({ market: marketPDA, order: orderPDA, owner: userKey, systemProgram: web3.SystemProgram.programId })
         .rpc();
       addTx(tx);
       log(`Order #${orderId} placed ✓`);
@@ -174,14 +229,15 @@ export default function Home() {
   }
 
   async function cancelOrder(order: OrderData) {
-    if (!wallet.publicKey || !market) return;
+    if (!anchorWallet || !anchorWallet.publicKey || !market) return;
     setLoading(true);
     try {
-      const program = getProgram(connection, wallet);
-      const marketPDA = new PublicKey(market.address);
+      const program = getProgram(connection, anchorWallet);
+      const userKey = new web3.PublicKey(safePubkeyBase58(anchorWallet.publicKey));
+      const marketPDA = new web3.PublicKey(market.address);
       const tx = await (program.methods as any)
         .cancelOrder()
-        .accounts({ order: new PublicKey(order.address), market: marketPDA, authority: wallet.publicKey })
+        .accounts({ order: new web3.PublicKey(order.address), market: marketPDA, authority: userKey })
         .rpc();
       addTx(tx);
       log(`Order #${order.orderId} cancelled ✓`);
@@ -193,16 +249,17 @@ export default function Home() {
   }
 
   async function matchOrders() {
-    if (!wallet.publicKey || !market) return;
+    if (!anchorWallet || !anchorWallet.publicKey || !market) return;
     setLoading(true);
     try {
-      const program = getProgram(connection, wallet);
-      const marketPDA = new PublicKey(market.address);
+      const program = getProgram(connection, anchorWallet);
+      const userKey = new web3.PublicKey(safePubkeyBase58(anchorWallet.publicKey));
+      const marketPDA = new web3.PublicKey(market.address);
       const [bidPDA] = getOrderPDA(marketPDA, parseInt(bidId));
       const [askPDA] = getOrderPDA(marketPDA, parseInt(askId));
       const tx = await (program.methods as any)
         .matchOrders()
-        .accounts({ bidOrder: bidPDA, askOrder: askPDA, market: marketPDA, matcher: wallet.publicKey })
+        .accounts({ bidOrder: bidPDA, askOrder: askPDA, market: marketPDA, matcher: userKey })
         .rpc();
       addTx(tx);
       log(`Matched bid #${bidId} with ask #${askId} ✓`);
@@ -214,17 +271,35 @@ export default function Home() {
     setLoading(false);
   }
 
+  if (!mounted) {
+    return (
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Order Matching Engine</h1>
+            <span className="text-xs bg-purple-800 text-purple-200 px-2 py-0.5 rounded mt-1 inline-block">Devnet</span>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Order Matching Engine</h1>
-          <span className="text-xs bg-purple-800 text-purple-200 px-2 py-0.5 rounded mt-1 inline-block">Devnet</span>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs bg-purple-800 text-purple-200 px-2 py-0.5 rounded">Devnet</span>
+            {balance !== null && (
+              <span className="text-xs text-gray-400">Balance: {balance.toFixed(4)} SOL</span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <a href="https://github.com/tomaszstefaniak/solana-order-matching" target="_blank" className="text-gray-400 hover:text-white text-sm">GitHub ↗</a>
-          <WalletMultiButton style={{}} />
+          {mounted && <WalletMultiButton style={{}} />}
         </div>
       </div>
 
@@ -250,15 +325,19 @@ export default function Home() {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="text-gray-500">Address</div><div className="font-mono text-xs text-gray-300">{shortKey(market.address)}</div>
                 <div className="text-gray-500">Admin</div><div className="font-mono text-xs text-gray-300">{shortKey(market.admin)}</div>
-                <div className="text-gray-500">Fee</div><div className="text-gray-300">{market.feeBps} bps</div>
+                <div className="text-gray-500">Fee</div><div className="text-gray-300">{(market.feeBps / 100).toFixed(2)}%</div>
                 <div className="text-gray-500">Orders placed</div><div className="text-gray-300">{market.orderCount}</div>
               </div>
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-gray-500">No market found for your wallet. Initialize one:</p>
-                <div className="flex gap-2">
-                  <input value={feeBps} onChange={e => setFeeBps(e.target.value)} placeholder="Fee bps" className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm w-28 text-white" />
-                  <button onClick={initMarket} disabled={loading} className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm px-4 py-1.5 rounded">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-400">Trading fee:</label>
+                  <input value={feeBps} onChange={e => setFeeBps(e.target.value)} placeholder="e.g. 25" className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm w-20 text-white text-right" />
+                  <span className="text-sm text-gray-500">
+                    {feeBps && !isNaN(Number(feeBps)) ? `${(Number(feeBps) / 100).toFixed(2)}%` : "—"}
+                  </span>
+                  <button onClick={initMarket} disabled={loading} className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm px-4 py-1.5 rounded ml-2">
                     Initialize Market
                   </button>
                 </div>
@@ -281,7 +360,7 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  <input value={price} onChange={e => setPrice(e.target.value)} placeholder="Price (lamports)" className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white flex-1 min-w-32" />
+                  <input value={price} onChange={e => setPrice(e.target.value)} placeholder="Price (SOL)" className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white flex-1 min-w-32" />
                   <input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="Quantity" className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white flex-1 min-w-32" />
                   <button onClick={placeOrder} disabled={loading || !price || !quantity}
                     className={`text-sm px-4 py-1.5 rounded text-white disabled:opacity-50 ${side === "Buy" ? "bg-green-600 hover:bg-green-500" : "bg-red-600 hover:bg-red-500"}`}>
@@ -316,7 +395,7 @@ export default function Home() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-gray-500 text-left border-b border-gray-800">
-                          <th className="pb-2 pr-3">#</th>
+                          <th className="pb-2 pr-3">Order ID</th>
                           <th className="pb-2 pr-3">Owner</th>
                           <th className="pb-2 pr-3">Side</th>
                           <th className="pb-2 pr-3">Price</th>
@@ -332,13 +411,13 @@ export default function Home() {
                             <td className="py-2 pr-3 text-gray-400">{o.orderId}</td>
                             <td className="py-2 pr-3 font-mono text-xs text-gray-400">{shortKey(o.owner)}</td>
                             <td className={`py-2 pr-3 font-medium ${o.side === "Buy" ? "text-green-400" : "text-red-400"}`}>{o.side}</td>
-                            <td className="py-2 pr-3 text-gray-300">{o.price.toLocaleString()}</td>
+                            <td className="py-2 pr-3 text-gray-300">{(o.price / web3.LAMPORTS_PER_SOL).toFixed(4)} SOL</td>
                             <td className="py-2 pr-3 text-gray-300">{o.quantity}</td>
                             <td className="py-2 pr-3 text-gray-300">{o.filledQty}</td>
                             <td className={`py-2 pr-3 ${statusColor(o.status)}`}>{o.status}</td>
                             <td className="py-2">
-                              {o.status === "Open" && o.owner === wallet.publicKey?.toBase58() && (
-                                <button onClick={() => cancelOrder(o)} className="text-xs text-red-400 hover:text-red-300">Cancel</button>
+                              {o.status === "Open" && (() => { try { return o.owner === safePubkeyBase58(wallet.publicKey); } catch { return false; } })() && (
+                                <button onClick={() => cancelOrder(o)} className="text-xs bg-red-900/40 hover:bg-red-800/60 text-red-400 hover:text-red-200 border border-red-800/50 px-2 py-0.5 rounded">Cancel</button>
                               )}
                             </td>
                           </tr>
