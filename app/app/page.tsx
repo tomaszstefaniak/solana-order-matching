@@ -248,6 +248,26 @@ export default function Home() {
     setLoading(false);
   }
 
+  async function closeOrder(order: OrderData) {
+    if (!anchorWallet || !anchorWallet.publicKey || !market) return;
+    setLoading(true);
+    try {
+      const program = getProgram(connection, anchorWallet);
+      const userKey = new web3.PublicKey(safePubkeyBase58(anchorWallet.publicKey));
+      const marketPDA = new web3.PublicKey(market.address);
+      const tx = await (program.methods as any)
+        .closeOrder()
+        .accounts({ order: new web3.PublicKey(order.address), market: marketPDA, owner: userKey })
+        .rpc();
+      addTx(tx);
+      log(`Order #${order.orderId} closed — rent reclaimed ✓`);
+      await fetchOrders();
+    } catch (e: any) {
+      log(`Error: ${e.message}`);
+    }
+    setLoading(false);
+  }
+
   async function matchOrders() {
     if (!anchorWallet || !anchorWallet.publicKey || !market) return;
     setLoading(true);
@@ -415,9 +435,12 @@ export default function Home() {
                             <td className="py-2 pr-3 text-gray-300">{o.quantity}</td>
                             <td className="py-2 pr-3 text-gray-300">{o.filledQty}</td>
                             <td className={`py-2 pr-3 ${statusColor(o.status)}`}>{o.status}</td>
-                            <td className="py-2">
-                              {o.status === "Open" && (() => { try { return o.owner === safePubkeyBase58(wallet.publicKey); } catch { return false; } })() && (
+                            <td className="py-2 space-x-1">
+                              {(o.status === "Open" || o.status === "PartiallyFilled") && (() => { try { return o.owner === safePubkeyBase58(wallet.publicKey); } catch { return false; } })() && (
                                 <button onClick={() => cancelOrder(o)} className="text-xs bg-red-900/40 hover:bg-red-800/60 text-red-400 hover:text-red-200 border border-red-800/50 px-2 py-0.5 rounded">Cancel</button>
+                              )}
+                              {(o.status === "Filled" || o.status === "Cancelled") && (() => { try { return o.owner === safePubkeyBase58(wallet.publicKey); } catch { return false; } })() && (
+                                <button onClick={() => closeOrder(o)} className="text-xs bg-gray-800/60 hover:bg-gray-700/80 text-gray-400 hover:text-gray-200 border border-gray-700/50 px-2 py-0.5 rounded">Close</button>
                               )}
                             </td>
                           </tr>
