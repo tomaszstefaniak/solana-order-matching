@@ -270,6 +270,12 @@ export default function Home() {
 
   async function matchOrders() {
     if (!anchorWallet || !anchorWallet.publicKey || !market) return;
+    if (bidId === askId) { log("Error: Bid and Ask Order IDs must be different"); return; }
+    const bidOrder = orders.find(o => o.orderId === parseInt(bidId));
+    const askOrder = orders.find(o => o.orderId === parseInt(askId));
+    if (bidOrder && bidOrder.side !== "Buy") { log(`Error: Order #${bidId} is a ${bidOrder.side} order — expected Buy for bid`); return; }
+    if (askOrder && askOrder.side !== "Sell") { log(`Error: Order #${askId} is a ${askOrder.side} order — expected Sell for ask`); return; }
+    if (bidOrder && askOrder && bidOrder.price < askOrder.price) { log(`Error: Bid price (${(bidOrder.price / web3.LAMPORTS_PER_SOL).toFixed(4)} SOL) must be ≥ Ask price (${(askOrder.price / web3.LAMPORTS_PER_SOL).toFixed(4)} SOL)`); return; }
     setLoading(true);
     try {
       const program = getProgram(connection, anchorWallet);
@@ -381,7 +387,7 @@ export default function Home() {
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <input value={price} onChange={e => setPrice(e.target.value)} placeholder="Price (SOL)" className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white flex-1 min-w-32" />
-                  <input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="Quantity" className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white flex-1 min-w-32" />
+                  <input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="Quantity (units)" className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white flex-1 min-w-32" />
                   <button onClick={placeOrder} disabled={loading || !price || !quantity}
                     className={`text-sm px-4 py-1.5 rounded text-white disabled:opacity-50 ${side === "Buy" ? "bg-green-600 hover:bg-green-500" : "bg-red-600 hover:bg-red-500"}`}>
                     Place {side}
