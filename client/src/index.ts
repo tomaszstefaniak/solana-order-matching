@@ -19,7 +19,7 @@ import { homedir } from "os";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PROGRAM_ID = new PublicKey(
-  "56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY"
+  "CpnJ2pRUqZxSLh45qiX58YyJBuhQ3voDKKy8RYibnJ4n"
 );
 
 const IDL_PATH = join(__dirname, "../../app/idl/order_matching.json");

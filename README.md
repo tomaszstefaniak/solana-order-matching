@@ -2,7 +2,7 @@
 
 **Superteam Poland Bounty** — Solana/Anchor program implementing a central-limit order book (CLOB) entirely on-chain.
 
-Program ID (devnet): `56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY`
+Program ID (devnet): `CpnJ2pRUqZxSLh45qiX58YyJBuhQ3voDKKy8RYibnJ4n`
 
 ---
 
@@ -71,6 +71,7 @@ On-chain replacement for the components above:
 | Compute Unit limit | Each transaction is bounded by ~1.4M CU per block, ~200k CU per typical instruction. Complex matching loops are not feasible in a single transaction. |
 | Rent per order | Each `Order` account (~116 bytes) requires ~0.002 SOL rent-exempt deposit. High-frequency strategies must account for account creation cost. |
 | No token transfer | This implementation is a **pure state machine**. It demonstrates the matching logic without actual SPL token transfers. A production system would add token vaults (SPL Token program) for escrowing funds. |
+| Self-match check disabled | The `require!(bid.owner != ask.owner)` anti-wash-trading guard is commented out in this devnet build to enable single-wallet testing. It should be re-enabled for a production deployment where multiple traders participate. |
 | Partial fill support | `match_orders` fills up to `min(bid_remaining, ask_remaining)`, updating both order statuses (`PartiallyFilled` or `Filled`). Multiple calls are needed to fully fill a large order against several smaller ones. |
 | Anyone can match | `matcher` is any signer. Matching is permissionless — a keeper network (or any MEV bot) can submit matching transactions and collect protocol fees in a production version. |
 
@@ -230,11 +231,11 @@ anchor deploy --provider.cluster devnet
 
 ## Devnet Deployment
 
-Program ID: **`56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY`**
+Program ID: **`CpnJ2pRUqZxSLh45qiX58YyJBuhQ3voDKKy8RYibnJ4n`**
 
-Explorer: https://explorer.solana.com/address/56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY?cluster=devnet
+Explorer: https://explorer.solana.com/address/CpnJ2pRUqZxSLh45qiX58YyJBuhQ3voDKKy8RYibnJ4n?cluster=devnet
 
-Deploy transaction (v2): https://explorer.solana.com/tx/ZnFXKa8nw86KpKhmJetc7bWH5NrCJiWdvgALtNQdNJdsXQEQZWS6Rw1NJReUYBcDSKZ9SEfjH5gnNyVRZhBJd8V?cluster=devnet
+Deploy transaction: https://explorer.solana.com/tx/3UUTrJmB4fpyh8TgYiPqBwMkC12R1pY4xCL1PDQWYCByXYq6L17u3LTSD4eLY2rqSuUFtTAARiGn3e15LeRYcdHs?cluster=devnet
 
 ---
 

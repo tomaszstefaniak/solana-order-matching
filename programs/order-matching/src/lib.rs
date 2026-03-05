@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("56Ygzbd4js8d9T5jzzgc5kVgSwUATsEHZ5dwZxkPq9TY");
+declare_id!("CpnJ2pRUqZxSLh45qiX58YyJBuhQ3voDKKy8RYibnJ4n");
 
 // Seed constants — avoids typo drift across structs
 pub const MARKET_SEED: &[u8] = b"market";
@@ -106,6 +106,9 @@ pub mod order_matching {
         require!(bid.side == Side::Buy, OrderMatchingError::InvalidSide);
         require!(ask.side == Side::Sell, OrderMatchingError::InvalidSide);
         require!(bid.price >= ask.price, OrderMatchingError::PriceMismatch);
+        // Self-match check disabled for devnet testing with a single wallet.
+        // Uncomment for production:
+        // require!(bid.owner != ask.owner, OrderMatchingError::SelfMatch);
 
         // FIX 5: enforce invariants before arithmetic
         require!(bid.filled_qty <= bid.quantity, OrderMatchingError::Overflow);
@@ -124,7 +127,11 @@ pub mod order_matching {
         // FIX 5: guard against zero-fill (e.g. already fully filled)
         require!(fill_qty > 0, OrderMatchingError::ZeroFill);
 
-        let fill_price = ask.price;
+        let fill_price = if bid.order_id < ask.order_id {
+            bid.price
+        } else {
+            ask.price
+        };
 
         bid.filled_qty = bid
             .filled_qty
@@ -278,8 +285,11 @@ pub struct CloseOrder<'info> {
         bump = market.bump
     )]
     pub market: Account<'info, Market>,
+    /// CHECK: Receives rent from closed order. Constraint ensures it matches the order's owner.
     #[account(mut)]
-    pub owner: Signer<'info>,
+    pub owner: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub closer: Signer<'info>,
 }
 
 // ---------------------------------------------------------------------------
@@ -404,4 +414,6 @@ pub enum OrderMatchingError {
     Overflow,
     #[msg("Fill quantity is zero — orders may already be fully filled")]
     ZeroFill,
+    #[msg("Self-matching (wash trading) is not allowed")]
+    SelfMatch,
 }
