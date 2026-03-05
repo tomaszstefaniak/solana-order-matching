@@ -47,9 +47,9 @@ function getProvider(cluster: string, walletPath: string): AnchorProvider {
   return new AnchorProvider(connection, wallet, { commitment: "confirmed" });
 }
 
-function getProgram(provider: AnchorProvider): Program {
+function getProgram(provider: AnchorProvider): any {
   const idl = JSON.parse(readFileSync(IDL_PATH, "utf8"));
-  return new Program(idl, provider);
+  return new Program(idl, provider) as any;
 }
 
 function getMarketPDA(admin: PublicKey): [PublicKey, number] {

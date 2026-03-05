@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Rust fmt + check + audit + JS checks
+    name: CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Check formatting
+      - name: Rust fmt
         run: cargo fmt --all -- --check
 
       - name: Cargo check
@@ -36,27 +36,36 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
 
-      - name: Run cargo-audit
-        run: |
-          cargo audit -q || echo "cargo-audit returned non-zero exit (vulns may exist); review output above"
+      - name: Cargo audit (informational)
+        run: cargo audit -q || true
 
-      - name: Node setup
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Install npm deps (root + app)
-        run: |
-          npm ci
-          cd app && npm ci
+      # ── root (tests + tooling) ──────────────────────────────────────────────
+      - name: Install root deps
+        run: npm ci
 
-      - name: Run npm audit (low severity allowed)
-        run: |
-          npm audit --json > audit.json || true
-          cat audit.json | jq '.metadata.vulnerabilities'
+      - name: npm audit root (informational)
+        run: npm audit || true
 
-      - name: Type-check TS
-        run: npx tsc --noEmit
+      - name: Type-check tests
+        run: npx tsc --noEmit --project tsconfig.json
 
-# Note: anchor build is intentionally omitted from CI due to anchor-cli compilation fragility
-# on some runners. Build and deploy locally before submission.
+      # ── CLI client ──────────────────────────────────────────────────────────
+      - name: Install client deps
+        run: cd client && npm ci
+
+      - name: Build CLI client (type-check)
+        run: cd client && npm run build
+
+      # ── Next.js app ─────────────────────────────────────────────────────────
+      - name: Install app deps
+        run: cd app && npm ci
+
+      - name: Build Next.js app (type-check + bundle)
+        run: cd app && npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1

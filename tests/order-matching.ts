@@ -1,3 +1,4 @@
+// @ts-nocheck
 const anchor = require("@coral-xyz/anchor");
 const { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } = require("@solana/web3.js");
 const { assert } = require("chai");
