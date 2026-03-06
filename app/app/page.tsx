@@ -276,13 +276,15 @@ export default function Home() {
     if (bidOrder && bidOrder.side !== "Buy") { log(`Error: Order #${bidId} is a ${bidOrder.side} order — expected Buy for bid`); return; }
     if (askOrder && askOrder.side !== "Sell") { log(`Error: Order #${askId} is a ${askOrder.side} order — expected Sell for ask`); return; }
     if (bidOrder && askOrder && bidOrder.price < askOrder.price) { log(`Error: Bid price (${(bidOrder.price / web3.LAMPORTS_PER_SOL).toFixed(4)} SOL) must be ≥ Ask price (${(askOrder.price / web3.LAMPORTS_PER_SOL).toFixed(4)} SOL)`); return; }
+    if (!bidOrder || !askOrder) { log("Error: Order IDs not found in current order book — try refreshing"); return; }
     setLoading(true);
     try {
       const program = getProgram(connection, anchorWallet);
       const userKey = new web3.PublicKey(safePubkeyBase58(anchorWallet.publicKey));
       const marketPDA = new web3.PublicKey(market.address);
-      const [bidPDA] = getOrderPDA(marketPDA, parseInt(bidId));
-      const [askPDA] = getOrderPDA(marketPDA, parseInt(askId));
+      // Use existing on-chain addresses instead of re-deriving PDAs (avoids seed mismatch issues)
+      const bidPDA = new web3.PublicKey(bidOrder.address);
+      const askPDA = new web3.PublicKey(askOrder.address);
       const tx = await (program.methods as any)
         .matchOrders()
         .accounts({ bidOrder: bidPDA, askOrder: askPDA, market: marketPDA, matcher: userKey })
@@ -292,7 +294,8 @@ export default function Home() {
       await fetchOrders();
       setBidId(""); setAskId("");
     } catch (e: any) {
-      log(`Error: ${e.message}`);
+      const programLogs = e.logs ? `\n${e.logs.filter((l: string) => l.includes("Error") || l.includes("failed")).join("\n")}` : "";
+      log(`Error: ${e.message}${programLogs}`);
     }
     setLoading(false);
   }

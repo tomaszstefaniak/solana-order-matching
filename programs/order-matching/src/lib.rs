@@ -285,11 +285,8 @@ pub struct CloseOrder<'info> {
         bump = market.bump
     )]
     pub market: Account<'info, Market>,
-    /// CHECK: Receives rent from closed order. Constraint ensures it matches the order's owner.
     #[account(mut)]
-    pub owner: UncheckedAccount<'info>,
-    #[account(mut)]
-    pub closer: Signer<'info>,
+    pub owner: Signer<'info>,
 }
 
 // ---------------------------------------------------------------------------

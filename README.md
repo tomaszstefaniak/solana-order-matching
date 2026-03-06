@@ -172,7 +172,7 @@ Matches a bid order against an ask order.
 
 **Validation**: Both orders must be Open/PartiallyFilled; `bid.price >= ask.price`.
 
-**Fill logic**: `fill_qty = min(bid_remaining, ask_remaining)`. Fill price = `ask.price` (maker pricing).
+**Fill logic**: `fill_qty = min(bid_remaining, ask_remaining)`. Fill price = price of the **earlier (resting) order** (maker pricing via `order_id` comparison — lower ID was placed first and is the maker).
 
 **Events**: `MatchEvent { bid_order_id, ask_order_id, price, quantity, timestamp }`
 
@@ -261,7 +261,6 @@ npx ts-node src/index.ts --cluster devnet init-market 25
 npx ts-node src/index.ts --cluster devnet place-order \
   --market <admin-pubkey> \
   --side buy \
-  --type limit \
   --price 1000 \
   --quantity 10
 
@@ -269,7 +268,6 @@ npx ts-node src/index.ts --cluster devnet place-order \
 npx ts-node src/index.ts --cluster devnet place-order \
   --market <admin-pubkey> \
   --side sell \
-  --type limit \
   --price 900 \
   --quantity 5
 ```
