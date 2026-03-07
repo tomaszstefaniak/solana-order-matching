@@ -269,10 +269,3 @@ A keeper can:
 3) submit `match_orders`
 
 ---
-
-## Future work (what would make this “real”)
-- SPL Token escrow (vault PDAs)
-- settlement on fill (CPI to token program)
-- fee collection & distribution
-- proper on-chain orderbook or a more formal keeper protocol
-- stronger anti-spam economics & lifecycle policies
