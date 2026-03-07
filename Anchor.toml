@@ -12,8 +12,8 @@ order_matching = "CpnJ2pRUqZxSLh45qiX58YyJBuhQ3voDKKy8RYibnJ4n"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "npm run test"
+test = "RUN_INTEGRATION=true npm run test"

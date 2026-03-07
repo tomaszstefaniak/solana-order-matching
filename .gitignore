@@ -5,13 +5,12 @@
 target/*
 !target/idl
 !target/idl/**
-!target/deploy
-!target/deploy/order_matching-keypair.json
+# never commit program keypairs
+target/deploy/*-keypair.json
 **/*.rs.bk
 node_modules
 test-ledger
 .yarn
 app/.next/
 app/node_modules/
-target/deploy/order_matching-keypair.json
 .claude/

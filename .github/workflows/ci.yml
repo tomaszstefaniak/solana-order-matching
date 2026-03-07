@@ -33,6 +33,9 @@ jobs:
       - name: Cargo check
         run: cargo check --all-targets
 
+      - name: Cargo clippy
+        run: cargo clippy --all-targets -- -D warnings -A unexpected_cfgs
+
       - name: Cargo test
         run: cargo test --all
 
@@ -56,6 +59,9 @@ jobs:
 
       - name: Type-check tests
         run: npx tsc --noEmit --project tsconfig.json
+
+      - name: Run test runner (integration is skipped by default)
+        run: npm test
 
       # ── CLI client ──────────────────────────────────────────────────────────
       - name: Install client deps
