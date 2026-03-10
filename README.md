@@ -1,7 +1,7 @@
-# On-Chain Order Matching Engine (Solana / Anchor) — limit-only CLOB prototype
+# On-Chain Order Matching Engine (Solana / Anchor)
 
 **Superteam Poland Bounty submission** — an on-chain, Anchor-based prototype of a central-limit order book (CLOB):
-place → cancel → match, with partial fills and deterministic execution.
+place / cancel / match, with partial fills and deterministic execution.
 
 **Program ID (devnet):** `CpnJ2pRUqZxSLh45qiX58YyJBuhQ3voDKKy8RYibnJ4n`
 
