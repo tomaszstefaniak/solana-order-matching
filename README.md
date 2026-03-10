@@ -7,7 +7,7 @@ place → cancel → match, with partial fills and deterministic execution.
 
 ---
 
-## What this is (in one paragraph)
+## tl;dr
 
 This repo is a **minimal on-chain order matching state machine** on Solana.  
 Orders live as program-owned accounts (PDAs). Anyone can call `match_orders` to match a crossing bid/ask pair (bid ≥ ask).  
