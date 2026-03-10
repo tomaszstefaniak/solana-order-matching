@@ -11,7 +11,7 @@ place → cancel → match, with partial fills and deterministic execution.
 
 This repo is a **minimal on-chain order matching state machine** on Solana.  
 Orders live as program-owned accounts (PDAs). Anyone can call `match_orders` to match a crossing bid/ask pair (bid ≥ ask).  
-This version is **limit-only** (market orders are rejected) and it does **not** move tokens yet — it focuses on correctness, constraints, and state transitions.
+This version is **limit-only** (market orders are rejected) and it does **not** move tokens yet. It focuses on correctness, constraints, and state transitions.
 
 ---
 
